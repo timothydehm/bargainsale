@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bargain Sale Calculator - Land Conservancy</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useMemo } = React;
+
+        function BargainSaleCalculator() {
+            const [fairMarketValue, setFairMarketValue] = useState(500000);
+            const [purchasePrice, setPurchasePrice] = useState(300000);
+            const [costBasis, setCostBasis] = useState(100000);
+            const [federalTaxRate, setFederalTaxRate] = useState(24);
+            const [stateTaxRate, setStateTaxRate] = useState(6);
+            const [capitalGainsRate, setCapitalGainsRate] = useState(15);
+            const [deductionLimit, setDeductionLimit] = useState(30);
+            const [agi, setAgi] = useState(200000);
+
+            const calculations = useMemo(() => {
+                const bargainElement = fairMarketValue - purchasePrice;
+                const salePercentage = purchasePrice / fairMarketValue;
+                const allocatedBasis = costBasis * salePercentage;
+                const capitalGain = purchasePrice - allocatedBasis;
+                const capitalGainsTax = capitalGain * (capitalGainsRate / 100);
+                
+                const maxDeductionThisYear = agi * (deductionLimit / 100);
+                const deductionThisYear = Math.min(bargainElement, maxDeductionThisYear);
+                const carryforward = Math.max(0, bargainElement - deductionThisYear);
+                
+                const combinedTaxRate = (federalTaxRate + stateTaxRate) / 100;
+                const taxSavingsThisYear = deductionThisYear * combinedTaxRate;
+                const potentialCarryforwardSavings = carryforward * combinedTaxRate;
+                
+                const cashReceived = purchasePrice;
+                const netProceeds = cashReceived - capitalGainsTax + taxSavingsThisYear;
+                const totalValue = netProceeds + potentialCarryforwardSavings;
+                
+                const fullSaleBasis = costBasis;
+                const fullSaleGain = fairMarketValue - fullSaleBasis;
+                const fullSaleTax = fullSaleGain * (capitalGainsRate / 100);
+                const alternativeNet = fairMarketValue - fullSaleTax;
+                
+                const benefitVsFullSale = totalValue - alternativeNet;
+
+                return {
+                    bargainElement,
+                    salePercentage,
+                    allocatedBasis,
+                    capitalGain,
+                    capitalGainsTax,
+                    deductionThisYear,
+                    carryforward,
+                    taxSavingsThisYear,
+                    potentialCarryforwardSavings,
+                    cashReceived,
+                    netProceeds,
+                    totalValue,
+                    alternativeNet,
+                    benefitVsFullSale
+                };
+            }, [fairMarketValue, purchasePrice, costBasis, federalTaxRate, stateTaxRate, capitalGainsRate, deductionLimit, agi]);
+
+            const formatCurrency = (value) => {
+                return new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(value);
+            };
+
+            const formatPercent = (value) => {
+                return `${value.toFixed(1)}%`;
+            };
+
+            const BarChart = ({ data, maxValue }) => {
+                return (
+                    <div className="space-y-4">
+                        {data.map((item, index) => (
+                            <div key={index} className="space-y-2">
+                                <div className="text-sm font-semibold text-gray-700">{item.label}</div>
+                                <div className="flex items-center space-x-2">
+                                    <div className="flex-1 bg-gray-200 rounded-full h-8 relative overflow-hidden">
+                                        <div 
+                                            className={`h-full ${item.color} flex items-center justify-end pr-3 text-white text-sm font-bold rounded-full transition-all duration-500`}
+                                            style={{ width: `${(item.value / maxValue) * 100}%` }}
+                                        >
+                                            {item.value > maxValue * 0.15 && formatCurrency(item.value)}
+                                        </div>
+                                    </div>
+                                    <div className="text-sm font-semibold text-gray-600 w-28 text-right">
+                                        {item.value <= maxValue * 0.15 && formatCurrency(item.value)}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                );
+            };
+
+            const comparisonData = [
+                { label: 'Bargain Sale - Cash', value: calculations.cashReceived, color: 'bg-green-500' },
+                { label: 'Bargain Sale - Tax Savings (Yr 1)', value: calculations.taxSavingsThisYear, color: 'bg-blue-500' },
+                { label: 'Bargain Sale - Carryforward Value', value: calculations.potentialCarryforwardSavings, color: 'bg-purple-500' },
+                { label: 'Full Market Sale - Net Proceeds', value: calculations.alternativeNet, color: 'bg-gray-500' }
+            ];
+
+            const maxChartValue = Math.max(...comparisonData.map(d => d.value));
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4 sm:p-8">
+                    <div className="max-w-7xl mx-auto">
+                        <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
+                            <div className="bg-gradient-to-r from-green-600 to-green-700 p-6 sm:p-8">
+                                <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
+                                    Bargain Sale Calculator
+                                </h1>
+                                <p className="text-green-100 text-lg">
+                                    Land Conservancy Negotiation Tool
+                                </p>
+                            </div>
+
+                            <div className="p-6 sm:p-8">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                    {/* Input Section */}
+                                    <div className="space-y-6">
+                                        <h2 className="text-2xl font-bold text-gray-800 border-b-2 border-green-500 pb-2">
+                                            Property Details
+                                        </h2>
+
+                                        <div className="space-y-4">
+                                            <div className="bg-green-50 p-4 rounded-lg">
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    Fair Market Value (Appraised)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={fairMarketValue}
+                                                    onChange={(e) => setFairMarketValue(Number(e.target.value))}
+                                                    className="w-full px-4 py-3 border-2 border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg font-semibold"
+                                                />
+                                                <p className="text-xs text-gray-600 mt-1">Based on qualified appraisal</p>
+                                            </div>
+
+                                            <div className="bg-blue-50 p-4 rounded-lg">
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    Purchase Price (Your Offer)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={purchasePrice}
+                                                    onChange={(e) => setPurchasePrice(Number(e.target.value))}
+                                                    className="w-full px-4 py-3 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg font-semibold"
+                                                />
+                                                <p className="text-xs text-gray-600 mt-1">Amount conservancy will pay</p>
+                                            </div>
+
+                                            <div className="bg-gray-50 p-4 rounded-lg">
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    Owner's Cost Basis
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={costBasis}
+                                                    onChange={(e) => setCostBasis(Number(e.target.value))}
+                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent text-lg"
+                                                />
+                                                <p className="text-xs text-gray-600 mt-1">Original purchase price + improvements</p>
+                                            </div>
+
+                                            <div className="bg-gray-50 p-4 rounded-lg">
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    Annual Gross Income (AGI)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={agi}
+                                                    onChange={(e) => setAgi(Number(e.target.value))}
+                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent text-lg"
+                                                />
+                                                <p className="text-xs text-gray-600 mt-1">Used to calculate deduction limits</p>
+                                            </div>
+                                        </div>
+
+                                        <h2 className="text-2xl font-bold text-gray-800 border-b-2 border-blue-500 pb-2 mt-8">
+                                            Tax Parameters
+                                        </h2>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    Federal Tax Rate (%)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={federalTaxRate}
+                                                    onChange={(e) => setFederalTaxRate(Number(e.target.value))}
+                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    State Tax Rate (%)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={stateTaxRate}
+                                                    onChange={(e) => setStateTaxRate(Number(e.target.value))}
+                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    Capital Gains Rate (%)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={capitalGainsRate}
+                                                    onChange={(e) => setCapitalGainsRate(Number(e.target.value))}
+                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    AGI Deduction Limit (%)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={deductionLimit}
+                                                    onChange={(e) => setDeductionLimit(Number(e.target.value))}
+                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Results Section */}
+                                    <div className="space-y-6">
+                                        <h2 className="text-2xl font-bold text-gray-800 border-b-2 border-purple-500 pb-2">
+                                            Key Results
+                                        </h2>
+
+                                        <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
+                                            <div className="text-sm font-semibold mb-1">Charitable Deduction</div>
+                                            <div className="text-4xl font-bold">{formatCurrency(calculations.bargainElement)}</div>
+                                            <div className="text-sm mt-2 opacity-90">
+                                                {formatPercent((calculations.bargainElement / fairMarketValue) * 100)} of property value
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="bg-green-100 p-4 rounded-lg border-2 border-green-300">
+                                                <div className="text-xs font-semibold text-gray-600 mb-1">Cash to Owner</div>
+                                                <div className="text-2xl font-bold text-green-700">{formatCurrency(calculations.cashReceived)}</div>
+                                            </div>
+                                            <div className="bg-blue-100 p-4 rounded-lg border-2 border-blue-300">
+                                                <div className="text-xs font-semibold text-gray-600 mb-1">Tax Savings (Yr 1)</div>
+                                                <div className="text-2xl font-bold text-blue-700">{formatCurrency(calculations.taxSavingsThisYear)}</div>
+                                            </div>
+                                            <div className="bg-red-100 p-4 rounded-lg border-2 border-red-300">
+                                                <div className="text-xs font-semibold text-gray-600 mb-1">Capital Gains Tax</div>
+                                                <div className="text-2xl font-bold text-red-700">{formatCurrency(calculations.capitalGainsTax)}</div>
+                                            </div>
+                                            <div className="bg-purple-100 p-4 rounded-lg border-2 border-purple-300">
+                                                <div className="text-xs font-semibold text-gray-600 mb-1">Carryforward</div>
+                                                <div className="text-2xl font-bold text-purple-700">{formatCurrency(calculations.carryforward)}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-xl shadow-lg">
+                                            <div className="text-sm font-semibold mb-1">Net Proceeds (Year 1)</div>
+                                            <div className="text-4xl font-bold">{formatCurrency(calculations.netProceeds)}</div>
+                                            <div className="text-sm mt-3 opacity-90">
+                                                Total Value (incl. carryforward): {formatCurrency(calculations.totalValue)}
+                                            </div>
+                                        </div>
+
+                                        <div className={`p-5 rounded-xl shadow-lg ${calculations.benefitVsFullSale > 0 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'bg-gradient-to-r from-amber-500 to-orange-500'} text-white`}>
+                                            <div className="text-sm font-semibold mb-1">
+                                                {calculations.benefitVsFullSale > 0 ? '✓ Better Than' : '△ Compared to'} Full Market Sale
+                                            </div>
+                                            <div className="text-3xl font-bold">
+                                                {calculations.benefitVsFullSale > 0 ? '+' : ''}{formatCurrency(calculations.benefitVsFullSale)}
+                                            </div>
+                                            <div className="text-xs mt-2 opacity-90">
+                                                Full sale net proceeds: {formatCurrency(calculations.alternativeNet)}
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-gray-50 p-4 rounded-lg">
+                                            <h3 className="font-bold text-gray-800 mb-3">Transaction Breakdown</h3>
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Sale portion:</span>
+                                                    <span className="font-semibold">{formatPercent(calculations.salePercentage * 100)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Allocated basis:</span>
+                                                    <span className="font-semibold">{formatCurrency(calculations.allocatedBasis)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Capital gain:</span>
+                                                    <span className="font-semibold">{formatCurrency(calculations.capitalGain)}</span>
+                                                </div>
+                                                <div className="flex justify-between border-t pt-2 mt-2">
+                                                    <span className="text-gray-600">Deduction (Year 1):</span>
+                                                    <span className="font-semibold">{formatCurrency(calculations.deductionThisYear)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Max deductible ({deductionLimit}% AGI):</span>
+                                                    <span className="font-semibold">{formatCurrency(agi * (deductionLimit / 100))}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Visualizations */}
+                                <div className="mt-8 pt-8 border-t-2 border-gray-200">
+                                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Visual Comparison</h2>
+                                    
+                                    <div className="bg-white p-6 rounded-lg shadow-lg">
+                                        <h3 className="font-bold text-gray-800 mb-6 text-center text-lg">Value Breakdown Comparison</h3>
+                                        <BarChart data={comparisonData} maxValue={maxChartValue} />
+                                        
+                                        <div className="mt-8 pt-6 border-t border-gray-200">
+                                            <div className="text-center">
+                                                <div className="text-sm text-gray-600 mb-2">Total Bargain Sale Value</div>
+                                                <div className="text-3xl font-bold text-green-600">{formatCurrency(calculations.totalValue)}</div>
+                                                <div className="text-sm text-gray-500 mt-1">vs. Full Sale: {formatCurrency(calculations.alternativeNet)}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Talking Points */}
+                                <div className="mt-8 bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
+                                    <h3 className="text-xl font-bold text-blue-900 mb-4">💡 Key Talking Points for Negotiation</h3>
+                                    <ul className="space-y-3 text-gray-700">
+                                        <li className="flex items-start">
+                                            <span className="text-green-600 font-bold mr-2 text-lg">✓</span>
+                                            <span>You receive <strong>{formatCurrency(calculations.cashReceived)}</strong> in cash plus an immediate tax deduction of <strong>{formatCurrency(calculations.bargainElement)}</strong></span>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <span className="text-green-600 font-bold mr-2 text-lg">✓</span>
+                                            <span>First-year tax savings: <strong>{formatCurrency(calculations.taxSavingsThisYear)}</strong> (combined federal and state)</span>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <span className="text-green-600 font-bold mr-2 text-lg">✓</span>
+                                            <span>Your net after-tax proceeds in Year 1: <strong>{formatCurrency(calculations.netProceeds)}</strong></span>
+                                        </li>
+                                        {calculations.carryforward > 0 && (
+                                            <li className="flex items-start">
+                                                <span className="text-purple-600 font-bold mr-2 text-lg">→</span>
+                                                <span>Additional <strong>{formatCurrency(calculations.carryforward)}</strong> deduction can be carried forward for up to 5 years, potentially worth <strong>{formatCurrency(calculations.potentialCarryforwardSavings)}</strong></span>
+                                            </li>
+                                        )}
+                                        <li className="flex items-start">
+                                            <span className="text-blue-600 font-bold mr-2 text-lg">★</span>
+                                            <span>Your land will be conserved in perpetuity, protecting its natural and agricultural values for future generations</span>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <span className="text-green-600 font-bold mr-2 text-lg">✓</span>
+                                            <span>Avoid the hassle of listing the property, showing it to buyers, and waiting months for a sale</span>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <span className="text-amber-600 font-bold mr-2 text-lg">⚠</span>
+                                            <span className="text-sm italic">Important: Please consult with your tax advisor for specific tax implications and to verify these projections</span>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                {/* Print Button */}
+                                <div className="mt-6 text-center">
+                                    <button 
+                                        onClick={() => window.print()}
+                                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-colors duration-200"
+                                    >
+                                        Print Summary
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 text-center text-gray-600 text-sm">
+                            <p>This calculator is for informational purposes only. Landowners should consult with tax and legal advisors.</p>
+                            <p className="mt-2">© {new Date().getFullYear()} Land Conservancy Bargain Sale Calculator</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<BargainSaleCalculator />, document.getElementById('root'));
+    </script>
+</body>
+</html>
